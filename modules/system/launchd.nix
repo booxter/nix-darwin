@@ -131,10 +131,10 @@ in
 
         if [[ ! -e "${cfg.build.launchd}/Library/LaunchAgents/$f" ]]; then
           echo "removing service $(basename "$f" .plist)" >&2
-          launchctl unload "/Library/LaunchAgents/$f" || true
-          if [[ -e "/Library/LaunchAgents/$f" ]]; then
-            rm -f "/Library/LaunchAgents/$f"
-          fi
+          ${launchdAgentManager} remove \
+            "/run/current-system/Library/LaunchAgents/$f" \
+            "/Library/LaunchAgents/$f" \
+            ${escapeShellArgs launchdAgentUsers}
         fi
       done
 

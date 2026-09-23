@@ -15,20 +15,20 @@ let
     ${prefix} launchctl setenv ${name} '${value}'
   '');
 
+  launchdAgentManager = pkgs.writeShellScript "nix-darwin-launchd-agent" (
+    builtins.readFile ./launchd-agent.sh
+  );
+
+  launchdAgentUsers = unique (
+    optional (config.system.primaryUser != null) config.system.primaryUser
+    ++ builtins.attrNames config.users.users
+  );
+
   launchdAgentActivation = target: ''
-    if ! diff '${cfg.build.launchd}/Library/LaunchAgents/${target}' '/Library/LaunchAgents/${target}' &> /dev/null; then
-      if test -f '/Library/LaunchAgents/${target}'; then
-        echo "reloading service $(basename ${target} .plist)" >&2
-        launchctl unload '/Library/LaunchAgents/${target}' || true
-      else
-        echo "creating service $(basename ${target} .plist)" >&2
-      fi
-      if test -L '/Library/LaunchAgents/${target}'; then
-        rm '/Library/LaunchAgents/${target}'
-      fi
-      cp -f '${cfg.build.launchd}/Library/LaunchAgents/${target}' '/Library/LaunchAgents/${target}'
-      launchctl load -w '/Library/LaunchAgents/${target}'
-    fi
+    ${launchdAgentManager} reconcile \
+      '${cfg.build.launchd}/Library/LaunchAgents/${target}' \
+      '/Library/LaunchAgents/${target}' \
+      ${escapeShellArgs launchdAgentUsers}
   '';
 
   launchdDaemonActivation = target: ''
@@ -113,6 +113,8 @@ in
         cd $out/user/Library/LaunchAgents
         ${concatMapStringsSep "\n" (attr: "ln -s '${attr.source}' '${attr.target}'") userLaunchAgents}
       '';
+
+    system.build.launchdAgentManager = launchdAgentManager;
 
     system.activationScripts.launchd.text = ''
       # Set up launchd services in /Library/LaunchAgents and /Library/LaunchDaemons

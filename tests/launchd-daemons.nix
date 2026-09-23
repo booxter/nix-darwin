@@ -11,6 +11,7 @@
     echo "checking launchd load in /activate" >&2
     grep "launchctl load .* '/Library/LaunchDaemons/org.nixos.foo.plist" ${config.out}/activate
     grep "nix-darwin-launchd-agent.* reconcile" ${config.out}/activate
+    grep "nix-darwin-launchd-agent.* remove" ${config.out}/activate
     grep "'/Library/LaunchAgents/org.nixos.bar.plist'" ${config.out}/activate
     echo "checking launchd user agent load in /activate" >&2
     grep "sudo --user=test-launchd-user -- launchctl load .* ~test-launchd-user/Library/LaunchAgents/org.nixos.baz.plist" ${config.out}/activate

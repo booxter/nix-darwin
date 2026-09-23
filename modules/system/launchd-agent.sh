@@ -102,6 +102,14 @@ bootstrap() {
   fi
 }
 
+bootout_legacy_system_agent() {
+  local plist=$1
+
+  # Older nix-darwin versions loaded global agents into the system domain.
+  # Targeting the plist path avoids disturbing a daemon with the same label.
+  "$launchctl" bootout system "$plist" >/dev/null 2>&1 || true
+}
+
 reconcile() {
   local source=$1
   local destination=$2
@@ -117,6 +125,7 @@ reconcile() {
     old_label=$("$plist_buddy" -c 'Print :Label' "$destination" 2>/dev/null || true)
   fi
 
+  bootout_legacy_system_agent "$destination"
   find_active_domains "$@"
 
   if ! /usr/bin/cmp -s "$source" "$destination"; then
@@ -153,8 +162,29 @@ reconcile() {
   done
 }
 
-if (( $# < 3 )) || [[ "$1" != reconcile ]]; then
-  echo "usage: $0 reconcile SOURCE DESTINATION [USER ...]" >&2
+remove() {
+  local plist=$1
+  local destination=$2
+  shift 2
+
+  local label
+  local domain
+
+  label=$("$plist_buddy" -c 'Print :Label' "$plist")
+  bootout_legacy_system_agent "$destination"
+  find_active_domains "$@"
+
+  for domain in "${domains[@]}"; do
+    bootout "$domain" "$label"
+  done
+
+  if [[ -e "$destination" || -L "$destination" ]]; then
+    /bin/rm -f "$destination"
+  fi
+}
+
+if (( $# < 3 )) || [[ "$1" != reconcile && "$1" != remove ]]; then
+  echo "usage: $0 {reconcile SOURCE|remove PLIST} DESTINATION [USER ...]" >&2
   exit 2
 fi
 

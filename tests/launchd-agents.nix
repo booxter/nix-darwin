@@ -24,7 +24,7 @@ let
     action=$1
     target=$2
 
-    printf '%s %s\n' "$action" "$target" >> "$state/log"
+    printf '%s %s %s\n' "$action" "$target" "''${3-}" >> "$state/log"
 
     case "$action" in
       print)
@@ -37,9 +37,13 @@ let
         fi
         ;;
       bootout)
-        uid=''${target#gui/}
-        uid=''${uid%%/*}
-        rm -f "$state/job-$uid"
+        if [[ "$target" == system ]]; then
+          rm -f "$state/legacy-system-job"
+        else
+          uid=''${target#gui/}
+          uid=''${uid%%/*}
+          rm -f "$state/job-$uid"
+        fi
         ;;
       bootstrap)
         uid=''${target#gui/}
@@ -67,7 +71,7 @@ in
     state=$TMPDIR/launchd-state
     destination=$TMPDIR/Library/LaunchAgents/org.nixos.test-agent.plist
     mkdir -p "$state" "$(dirname "$destination")"
-    touch "$state/log" "$state/domain-501"
+    touch "$state/log" "$state/domain-501" "$state/legacy-system-job"
 
     export NIX_DARWIN_TEST_STATE="$state"
     export NIX_DARWIN_LAUNCHCTL=${fakeLaunchctl}
@@ -79,6 +83,7 @@ in
     echo "checking initial agent bootstrap" >&2
     "$manager" reconcile ${firstAgent} "$destination"
     cmp ${firstAgent} "$destination"
+    test ! -e "$state/legacy-system-job"
     test -e "$state/job-501"
     test ! -e "$state/job-502"
     test "$(grep -c '^bootstrap ' "$state/log")" -eq 1
@@ -97,7 +102,7 @@ in
     "$manager" reconcile ${secondAgent} "$destination"
     cmp ${secondAgent} "$destination"
     test -e "$state/job-501"
-    grep '^bootout gui/501/org.nixos.test-agent$' "$state/log"
+    grep '^bootout gui/501/org.nixos.test-agent ' "$state/log"
     test "$(grep -c '^bootstrap ' "$state/log")" -eq 3
 
     echo "checking activation without a GUI login" >&2
@@ -106,5 +111,12 @@ in
     cmp ${firstAgent} "$destination"
     test ! -e "$state/job-501"
     test "$(grep -c '^bootstrap ' "$state/log")" -eq 3
+
+    echo "checking agent removal from active domains" >&2
+    touch "$state/domain-501" "$state/job-501" "$state/legacy-system-job"
+    "$manager" remove ${firstAgent} "$destination"
+    test ! -e "$destination"
+    test ! -e "$state/job-501"
+    test ! -e "$state/legacy-system-job"
   '';
 }

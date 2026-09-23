@@ -37,7 +37,8 @@ in
     grep -F '<key>org.nixos.xquartz.privileged_startx</key>' ${daemon}
 
     echo >&2 "checking system-wide LaunchAgent activation"
-    grep -F "launchctl load -w '/Library/LaunchAgents/org.nixos.xquartz.startx.plist'" ${config.out}/activate
+    grep "nix-darwin-launchd-agent.* reconcile" ${config.out}/activate
+    grep -F "'/Library/LaunchAgents/org.nixos.xquartz.startx.plist'" ${config.out}/activate
 
     echo >&2 "checking OpenSSH XAuthLocation"
     grep -F 'XAuthLocation ${lib.getExe pkgs.xauth}' ${config.out}/etc/ssh/ssh_config.d/100-nix-darwin.conf

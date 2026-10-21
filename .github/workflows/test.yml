@@ -20,6 +20,7 @@ jobs:
   # TODO: Change them once the repository configuration is updated.
 
   test-stable:
+    if: github.ref != 'refs/heads/test-shell-files-macos26'
     runs-on: macos-14
     steps:
     - uses: actions/checkout@v4
@@ -44,6 +45,11 @@ jobs:
         sw_vers
         nix --version
         shasum -a 256 /etc/bashrc /etc/zshrc
+        for file in /etc/bashrc /etc/zshrc; do
+          echo "::group::Installed $file"
+          cat "$file"
+          echo "::endgroup::"
+        done
         cmp /etc/bashrc doc/known-files/8b5e3466922d1ae34bc145e21c7e53e7329a7a7b58b148b436bd954d5e651ac3
         cmp /etc/zshrc doc/known-files/cf0f7b7775b4c058d6085d9e7e57d58c307ca43730f8e4d921a9ef4e530e7e16
     - name: Install channels
@@ -109,6 +115,11 @@ jobs:
         sw_vers
         nix --version
         shasum -a 256 /etc/bashrc /etc/zshrc
+        for file in /etc/bashrc /etc/zshrc; do
+          echo "::group::Installed $file"
+          cat "$file"
+          echo "::endgroup::"
+        done
         cmp /etc/bashrc doc/known-files/8b5e3466922d1ae34bc145e21c7e53e7329a7a7b58b148b436bd954d5e651ac3
         cmp /etc/zshrc doc/known-files/cf0f7b7775b4c058d6085d9e7e57d58c307ca43730f8e4d921a9ef4e530e7e16
     - name: Install nix-darwin
